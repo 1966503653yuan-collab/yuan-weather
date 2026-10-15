@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {normalizeGoogleHour,fetchGoogleWeather} from '../web/dist/google-weather.mjs';
+const hour=i=>({interval:{startTime:new Date(i*3600000).toISOString(),endTime:new Date((i+1)*3600000).toISOString()},temperature:{degrees:86,unit:'FAHRENHEIT'},precipitation:{qpf:{quantity:1,unit:'INCHES'},probability:{percent:60}},wind:{speed:{value:36,unit:'KILOMETERS_PER_HOUR'}}});
+const args={lat:6,lon:2,key:'test-secret',hours:72};
+test('converts units and aligns to hour end; missing is not zero',()=>{const h=normalizeGoogleHour(hour(0));assert.equal(h.t,3600);assert.equal(h.temp,30);assert.equal(h.rain,25.4);assert.equal(h.wind,10);assert.equal(h.gust,null);assert.equal(h.thunder,null)});
+test('72 hours use 3 pages, header key, no URL key or persistence',async()=>{let calls=0;let r=await fetchGoogleWeather(args,async(url,options)=>{assert(!url.includes('test-secret'));assert.equal(options.headers['X-Goog-Api-Key'],'test-secret');assert.equal(options.cache,'no-store');let u=new URL(url);assert.equal(u.searchParams.get('hours'),'72');if(calls)assert.equal(u.searchParams.get('pageToken'),String(calls));let page=calls++;return {ok:true,json:async()=>({forecastHours:Array.from({length:24},(_,i)=>hour(page*24+i)),nextPageToken:calls<3?String(calls):undefined})}});assert.equal(calls,3);assert.equal(r.rows.length,72);assert(r.complete)});
+test('403 does not retry or reveal server error or key',async()=>{let calls=0;await assert.rejects(fetchGoogleWeather(args,async()=>{calls++;return {ok:false,status:403,json:async()=>({error:'test-secret'})}}),e=>e.message.includes('403')&&!e.message.includes('test-secret'));assert.equal(calls,1)});
+test('rejects duplicate hours',async()=>{await assert.rejects(fetchGoogleWeather(args,async()=>({ok:true,json:async()=>({forecastHours:[hour(0),hour(0)]})})),/duplicate/)});
+test('incomplete response stays incomplete',async()=>{let r=await fetchGoogleWeather(args,async()=>({ok:true,json:async()=>({forecastHours:[hour(0)]})}));assert.equal(r.complete,false)});
+test('1 hour costs at most one request even if token returned',async()=>{let calls=0;let r=await fetchGoogleWeather({...args,hours:1},async()=>{calls++;return {ok:true,json:async()=>({forecastHours:[hour(0)],nextPageToken:'more'})}});assert.equal(calls,1);assert.equal(r.rows.length,1)});
+test('invalid coordinates/key make no requests',async()=>{await assert.rejects(fetchGoogleWeather({...args,key:''},()=>assert.fail('must not fetch')))});

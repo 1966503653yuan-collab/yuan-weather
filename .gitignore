@@ -1,0 +1,14 @@
+.DS_Store
+.tools/
+**/build/
+**/__pycache__/
+*.pyc
+/dist/
+.env
+.env.*
+*.p12
+*.jks
+*.keystore
+*.pem
+*.key
+node_modules/

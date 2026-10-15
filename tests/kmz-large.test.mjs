@@ -1,0 +1,18 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {zipSync,strToU8} from '../web/dist/fflate.mjs';
+import {kmzFileDocuments,routesToKML} from '../web/dist/route-import.mjs';
+const kml='<kml><Document><Placemark><LineString><coordinates>2,7 2.1,7.1</coordinates></LineString></Placemark></Document></kml>';
+test('40 MB media is skipped; only ranges are read',async()=>{const zip=zipSync({'video.mp4':[new Uint8Array(40*1024*1024),{level:0}],'nested/doc.kml':strToU8(kml)});let read=0;const blob=new Blob([zip]);const file={size:blob.size,slice(a,b){read+=b-a;return blob.slice(a,b)},arrayBuffer(){throw Error('whole-file read forbidden')}};assert.equal((await kmzFileDocuments(file))[0].text,kml);assert.ok(read<100000,read);});
+test('stored KML and multiple files',async()=>{let docs=await kmzFileDocuments(new Blob([zipSync({'doc.kml':[strToU8(kml),{level:0}],'other.kml':strToU8(kml)})]));assert.equal(docs.length,2);});
+test('corrupt payload rejected by CRC',async()=>{const bytes=zipSync({'doc.kml':[strToU8(kml),{level:0}]});bytes[40]^=1;await assert.rejects(kmzFileDocuments(new Blob([bytes])));});
+test('truncated archive rejected',async()=>{const bytes=zipSync({'doc.kml':strToU8(kml)});await assert.rejects(kmzFileDocuments(new Blob([bytes.slice(0,-4)])));});
+test('media-only archive rejected',async()=>{await assert.rejects(kmzFileDocuments(new Blob([zipSync({'x.jpg':new Uint8Array(2)})])));});
+test('oversize KML rejected',async()=>{await assert.rejects(kmzFileDocuments(new Blob([zipSync({'doc.kml':new Uint8Array(65*1024*1024)})])));});
+test('export only names and geometry with XML escaping',()=>{let out=routesToKML([{name:'A<&',path:[[7,2],[8,3]],description:'video.mp4'}]);assert.ok(out.includes('A&lt;&amp;'));assert.ok(out.includes('2,7 3,8'));assert.ok(!out.includes('video'));});
+import {mergeConnectedRoutes} from '../web/dist/route-import.mjs';
+const segment=(a,b,group=0)=>({name:'segment',path:[a,b],group,length:1});
+test('join exact endpoints with reversed segments',()=>{let r=mergeConnectedRoutes([segment([0,0],[0,1]),segment([0,2],[0,1])]);assert.equal(r.length,1);assert.equal(r[0].path.length,3);assert.equal(r[0].length,2)});
+test('branches and groups never joined',()=>{assert.equal(mergeConnectedRoutes([segment([0,0],[0,1]),segment([0,1],[0,2]),segment([0,1],[1,1])]).length,3);assert.equal(mergeConnectedRoutes([segment([0,0],[0,1]),segment([0,1],[0,2],1)]).length,2)});
+test('closed loop retains every edge',()=>{let r=mergeConnectedRoutes([segment([0,0],[0,1]),segment([0,1],[1,1]),segment([1,1],[0,0])]);assert.equal(r.length,1);assert.equal(r[0].path.length,4)});
+test('20 MB KML now accepted',async()=>{let data=strToU8('<kml>'+ ' '.repeat(20*1024*1024)+'</kml>');let result=await kmzFileDocuments(new Blob([zipSync({'doc.kml':data})]));assert.equal(result[0].text.length,data.length)});

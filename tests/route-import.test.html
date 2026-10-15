@@ -1,0 +1,37 @@
+<!doctype html><meta charset="utf-8"><title>KMZ / KML importer tests</title><h1>KMZ / KML tests</h1><pre id="results">Running</pre><script type="module">
+import {coordinates,kmzDocuments,kmlRoutes,importRoutes} from '../web/dist/route-import.mjs';
+import {zipSync,strToU8} from '../web/dist/fflate.mjs';
+import {sample} from '../web/dist/core.mjs';
+const xml=c=>`<?xml version="1.0"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document>${c}</Document></kml>`;
+const line=(name,c='2,7,12 2,7.1,13 2.1,7.1,15')=>`<Placemark><name>${name}</name><LineString><coordinates>${c}</coordinates></LineString></Placemark>`;
+let output=[],fail=0;const eq=(a,b)=>{if(JSON.stringify(a)!==JSON.stringify(b))throw Error(JSON.stringify(a)+' != '+JSON.stringify(b))},reject=f=>{try{f()}catch(e){return}throw Error('Expected rejection')};
+async function test(name,fn){try{await fn();output.push('PASS '+name)}catch(e){fail++;output.push('FAIL '+name+': '+e.message)}}
+await test('longitude / latitude / altitude',()=>eq(coordinates('2,7,12\n2.1,7.2,55'),[[7,2],[7.2,2.1]]));
+await test('remove consecutive duplicates',()=>eq(coordinates('2,7 2,7 2,7.1'),[[7,2],[7.1,2]]));
+await test('invalid latitude',()=>reject(()=>coordinates('2,91 2,7')));
+await test('invalid number',()=>reject(()=>coordinates('NaN,7 2,7')));
+await test('empty coordinate component',()=>reject(()=>coordinates(',7 2,7')));
+await test('KML line name and order',()=>{let r=kmlRoutes(xml(line('主线')));eq(r.length,1);eq(r[0].name,'主线 · 1');eq(r[0].path[0],[7,2])});
+await test('multiple lines stay separate',()=>eq(kmlRoutes(xml(line('A')+line('B'))).length,2));
+await test('MultiGeometry segments stay separate',()=>eq(kmlRoutes(xml('<Placemark><name>Sections</name><MultiGeometry>'+line('A')+line('B')+'</MultiGeometry></Placemark>')).length,2));
+await test('ignore point and polygon',()=>eq(kmlRoutes(xml('<Placemark><Point><coordinates>2,7</coordinates></Point></Placemark><Placemark><Polygon><outerBoundaryIs><LinearRing><coordinates>2,7 2,7.1 2.1,7.1 2,7</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>')).length,0));
+await test('malformed XML',()=>reject(()=>kmlRoutes('<kml><LineString></kml>')));
+await test('DTD rejected',()=>reject(()=>kmlRoutes('<!DOCTYPE kml>'+xml(line('A')))));
+await test('prefixed KML',()=>eq(kmlRoutes('<k:kml xmlns:k="http://www.opengis.net/kml/2.2"><k:Placemark><k:LineString><k:coordinates>2,7 2,7.1</k:coordinates></k:LineString></k:Placemark></k:kml>')[0].path.length,2));
+await test('gx Track',()=>eq(kmlRoutes('<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2"><Placemark><gx:Track><gx:coord>2 7 10</gx:coord><gx:coord>2.1 7.1 20</gx:coord></gx:Track></Placemark></kml>')[0].path,[[7,2],[7.1,2.1]]));
+const zipped=zipSync({'doc.kml':strToU8(xml(line('压缩主线'))),'images/ignored.png':new Uint8Array([1,2,3])});
+await test('compressed KMZ',()=>eq(kmlRoutes(kmzDocuments(zipped)[0].text)[0].name,'压缩主线 · 1'));
+await test('uncompressed ZIP',()=>eq(kmzDocuments(zipSync({'doc.kml':strToU8(xml(line('A')))},{level:0})).length,1));
+await test('nested KML',()=>eq(kmzDocuments(zipSync({'folder/route.kml':strToU8(xml(line('A')))}))[0].name,'folder/route.kml'));
+await test('multiple KML files',()=>eq(kmzDocuments(zipSync({'a.kml':strToU8(xml(line('A'))),'b.kml':strToU8(xml(line('B')))})).length,2));
+await test('truncated archive',()=>reject(()=>kmzDocuments(zipped.slice(0,-15))));
+await test('not ZIP',()=>reject(()=>kmzDocuments(strToU8('not zip'))));
+await test('no KML',()=>reject(()=>kmzDocuments(zipSync({'x.txt':strToU8('x')}))))
+await test('decompression limit',()=>reject(()=>kmzDocuments(zipSync({'doc.kml':new Uint8Array(65*1024*1024)}))));
+await test('KMZ File API',async()=>eq((await importRoutes(new File([zipped],'route.kmz'))).length,1));
+await test('KML File API',async()=>eq((await importRoutes(new File([xml(line('A'))],'route.kml'))).length,1));
+await test('5 km sampling follows imported bend',()=>{let r=kmlRoutes(xml(line('A')))[0],s=sample(r.path,12500);eq(s.sites[0].pk,'K12+500');eq(s.sites[1].pk,'K17+500');if(Math.abs(s.sites[1].lon-2)>.00001)throw Error('not on first segment')});
+await test('reverse endpoints',()=>eq(Math.abs(sample([...kmlRoutes(xml(line('A')))[0].path].reverse()).sites[0].lon-2.1)<1e-9,true));
+await test('unsupported extension',async()=>{let ok=false;try{await importRoutes(new File(['x'],'x.gpx'))}catch(e){ok=true}eq(ok,true)});
+document.getElementById('results').textContent=`${output.length-fail}/${output.length} passed\n`+output.join('\n');document.title=fail?'FAIL':'PASS';
+</script>
