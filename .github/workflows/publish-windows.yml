@@ -1,0 +1,33 @@
+name: Publish verified Windows release
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run view 38706639647 --json conclusion,headSha --jq 'select(.conclusion == "success" and .headSha == "009e2b44cac56d9d7ce71e5e43ac86464842482b")' > /tmp/build.json
+          test -s /tmp/build.json
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 38706639647
+          pattern: Windows-*
+          path: artifacts
+      - name: Check hashes and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for arch in x64 x86; do
+            (cd "artifacts/Windows-$arch"; sed -i 's/\r$//' "SHA256SUMS-Windows-$arch.txt"; sha256sum -c "SHA256SUMS-Windows-$arch.txt")
+          done
+          gh release create v1.7.1 artifacts/Windows-x64/* artifacts/Windows-x86/* --target "$GITHUB_SHA" --title '源的天气 Windows 1.7.1 · Windows 10 / 11' --notes-file windows/RELEASE_NOTES.md
