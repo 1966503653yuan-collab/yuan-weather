@@ -66,6 +66,8 @@ Android安装JDK11+、Android SDK Platform35及Build Tools35.0.0，设置 `ANDRO
 
 ## 验证状态
 
+Windows1.7.1的x64和x86构建均通过共享测试、WebView2界面检查、安装程序执行及安装后启动检查。[Windows构建记录](https://github.com/1966503653yuan-collab/yuan-weather/actions/runs/38706639647)。测试环境为Windows Server2022构建机，未完成Windows10/11各版本物理设备验收。
+
 1.7.0：71项JavaScript测试通过。Mac界面、Mac签名及Android签名已检查。Google解析使用模拟响应测试，未执行真实计费查询；Android尚未真机验证。
 
 ## Français

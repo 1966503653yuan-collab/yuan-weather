@@ -13,7 +13,7 @@
 
 本机数据放在 `%LOCALAPPDATA%\YuanWeather\WebView2`，升级保留。关闭窗口退出应用，只有运行时执行计划刷新。Google付费入口默认关闭、手动调用；密钥不保存。
 
-Windows应用与安装程序尚无商业代码签名证书。自动化Windows构建和界面测试的结果见仓库Actions；未完成Windows10/11各版本真实设备的全面验收。
+Windows应用与安装程序尚无商业代码签名证书。x64和x86均通过71项JavaScript测试、5项Python测试、WebView2界面启动、中法切换、颜色表展开、安装程序执行及安装后启动测试。[构建记录](https://github.com/1966503653yuan-collab/yuan-weather/actions/runs/38706639647)。未完成Windows10/11各版本真实设备的全面验收。
 
 Mac和安卓用户继续使用[v1.7.0](https://github.com/1966503653yuan-collab/yuan-weather/releases/tag/v1.7.0)。
 
