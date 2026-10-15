@@ -1,0 +1,69 @@
+name: Windows build and smoke test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    strategy:
+      matrix:
+        arch: [x64, x86]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Shared logic tests
+        shell: pwsh
+        run: |
+          $tests = Get-ChildItem tests/*.test.mjs | ForEach-Object FullName
+          node --test $tests
+          if ($LASTEXITCODE) { throw 'JavaScript tests failed' }
+          python -m unittest discover -s tests -p 'test_*.py'
+          if ($LASTEXITCODE) { throw 'Python tests failed' }
+      - name: Publish self-contained Windows application
+        shell: pwsh
+        run: |
+          dotnet publish windows/YuanWeather.csproj -c Release -r win-${{ matrix.arch }} --self-contained true -o windows/publish/${{ matrix.arch }}
+          if ($LASTEXITCODE) { throw 'Build failed' }
+      - name: Test actual WebView2 application
+        shell: pwsh
+        run: |
+          $folder = Resolve-Path windows/publish/${{ matrix.arch }}
+          $p = Start-Process "$folder/YuanWeather.exe" -ArgumentList '--smoke-test' -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'Smoke test timed out' }
+          if ($p.ExitCode -ne 0 -or -not (Test-Path "$folder/smoke-result.txt")) {
+            if (Test-Path "$folder/smoke-error.txt") { Get-Content "$folder/smoke-error.txt" }
+            throw 'Smoke test failed'
+          }
+          Get-Content "$folder/smoke-result.txt"
+          New-Item -ItemType Directory -Force test-evidence | Out-Null
+          Move-Item "$folder/windows-smoke.png" test-evidence/
+          Move-Item "$folder/smoke-result.txt" test-evidence/
+      - name: Package installer and portable zip
+        shell: pwsh
+        run: |
+          Invoke-WebRequest 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile windows/MicrosoftEdgeWebview2Setup.exe
+          $sig = Get-AuthenticodeSignature windows/MicrosoftEdgeWebview2Setup.exe
+          if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'Microsoft Corporation') { throw 'Invalid Microsoft installer signature' }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          & 'C:/Program Files (x86)/Inno Setup 6/ISCC.exe' /DArch=${{ matrix.arch }} windows/installer.iss
+          if ($LASTEXITCODE) { throw 'Installer compilation failed' }
+          Compress-Archive -Path windows/publish/${{ matrix.arch }}/* -DestinationPath dist/YuanWeather-1.7.1-Windows-${{ matrix.arch }}-Portable.zip
+          Get-ChildItem dist -File | ForEach-Object { "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } | Set-Content dist/SHA256SUMS-Windows-${{ matrix.arch }}.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Windows-${{ matrix.arch }}
+          path: dist/*
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Windows-test-evidence-${{ matrix.arch }}
+          path: |
+            test-evidence/*
+            windows/publish/${{ matrix.arch }}/smoke-error.txt

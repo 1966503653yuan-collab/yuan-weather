@@ -12,3 +12,8 @@
 *.pem
 *.key
 node_modules/
+**/bin/
+**/obj/
+windows/publish/
+windows/MicrosoftEdgeWebview2Setup.exe
+test-evidence/
