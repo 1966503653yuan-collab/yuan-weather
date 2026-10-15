@@ -8,6 +8,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 25
     strategy:
+      fail-fast: false
       matrix:
         arch: [x64, x86]
     steps:
@@ -56,6 +57,22 @@ jobs:
           if ($LASTEXITCODE) { throw 'Installer compilation failed' }
           Compress-Archive -Path windows/publish/${{ matrix.arch }}/* -DestinationPath dist/YuanWeather-1.7.1-Windows-${{ matrix.arch }}-Portable.zip
           Get-ChildItem dist -File | ForEach-Object { "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } | Set-Content dist/SHA256SUMS-Windows-${{ matrix.arch }}.txt
+      - name: Verify installer and installed application
+        shell: pwsh
+        run: |
+          $target = Join-Path $env:RUNNER_TEMP 'YuanWeatherInstalled'
+          $setup = Resolve-Path dist/YuanWeather-1.7.1-Windows-${{ matrix.arch }}-Setup.exe
+          $p = Start-Process $setup -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR=$target" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "Installer exit code $($p.ExitCode)" }
+          $app = Join-Path $target 'YuanWeather.exe'
+          if (-not (Test-Path $app)) { throw 'Installed executable missing' }
+          $p = Start-Process $app -ArgumentList '--smoke-test' -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'Installed app timed out' }
+          if ($p.ExitCode -ne 0 -or -not (Test-Path "$target/smoke-result.txt")) {
+            if (Test-Path "$target/smoke-error.txt") { Get-Content "$target/smoke-error.txt" }
+            throw 'Installed app smoke test failed'
+          }
+          Copy-Item "$target/smoke-result.txt" test-evidence/installed-smoke-result.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Windows-${{ matrix.arch }}

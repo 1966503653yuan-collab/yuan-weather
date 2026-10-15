@@ -15,7 +15,9 @@ class Tests(unittest.TestCase):
     with z.open('nested/doc.kml','w',force_zip64=True) as f:f.write(K)
     z.writestr('media.jpg',b'ignored')
    report=prepare(p,Path(d)/'out');self.assertEqual(report['input_segments'],2)
-   r=read_lines((Path(d)/'out'/'全部线路.kml').open('rb'),'out');self.assertEqual(len(r),1)
+   with (Path(d)/'out'/'全部线路.kml').open('rb') as f:
+    r=read_lines(f,'out')
+   self.assertEqual(len(r),1)
  def test_branches(self):
   def line(a,b,g=0):return dict(group=g,name='x',path=[a,b])
   r=merge([line((0,0),(0,1)),line((0,1),(0,2)),line((0,1),(1,1))]);self.assertEqual(len(r),3)
