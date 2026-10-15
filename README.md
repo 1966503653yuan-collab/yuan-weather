@@ -1,6 +1,6 @@
 # 源的天气 · Météo de Yuan
 
-面向道路施工排程的中文 / 法语天气应用。当前版本 **1.7.0**，提供macOS、Android及可自行托管的网页前端。
+面向道路施工排程的中文 / 法语天气应用。Windows版本 **1.7.1**，Mac/Android版本 **1.7.0**，另有可自行托管的网页前端。
 
 ## 功能
 
@@ -15,6 +15,7 @@
 
 在本仓库 **Releases** 下载：
 
+- **Windows 10 / 11**：提供x64安装程序和便携ZIP；32位Windows10选择x86。最低Windows10 1809。内含.NET运行库，缺少WebView2时安装程序会联网安装微软运行库。应用支持中文/法语；详见 [Windows说明](windows/README.md)。
 - Mac：macOS14+，Apple Silicon / Intel通用。DMG内应用拖入Applications。采用本地签名，尚未Apple公证。
 - Android：Android8+ APK。相同发行签名可覆盖更新；尚未做安卓真机测试。
 - 网页：可自行部署在HTTPS静态站点，通过Safari添加到iPhone主屏幕。此仓库不包含托管账户或自动部署配置。
@@ -59,6 +60,7 @@ Android安装JDK11+、Android SDK Platform35及Build Tools35.0.0，设置 `ANDRO
 - `web/dist/`：共享网页源码，无前端打包步骤。
 - `mac/`：AppKit / WKWebView外壳及桌面扩展。
 - `android/`：Java WebView、文件导入导出。
+- `windows/`：Windows Forms / WebView2窗口、原生保存对话框和安装程序。
 - `tools/`：独立路线清理工具。
 - `tests/`：模型计算、Google分页、KMZ读取和路线筛选测试；示例路线为测试夹具。
 
