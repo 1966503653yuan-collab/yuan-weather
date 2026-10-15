@@ -4,14 +4,14 @@
 [Setup]
 AppId={{A73D8539-E608-488D-9103-8D1A00220F16}
 AppName=源的天气 / Météo de Yuan
-AppVersion=1.7.1
+AppVersion=1.8.0
 AppPublisher=1966503653yuan-collab
 AppPublisherURL=https://github.com/1966503653yuan-collab/yuan-weather
 DefaultDirName={localappdata}\Programs\YuanWeather
 DefaultGroupName=源的天气
 PrivilegesRequired=lowest
 OutputDir=..\dist
-OutputBaseFilename=YuanWeather-1.7.1-Windows-{#Arch}-Setup
+OutputBaseFilename=YuanWeather-1.8.0-Windows-{#Arch}-Setup
 SetupIconFile=App.ico
 UninstallDisplayIcon={app}\YuanWeather.exe
 Compression=lzma2

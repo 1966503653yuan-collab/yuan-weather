@@ -1,5 +1,7 @@
+import {translate} from "./i18n.mjs";
+const desktopEnglish={"施工气象 · 全线时段总览": "Construction weather · full-route schedule", "固定桩号，滚动查看时段；点击色块查看判定依据。": "Fixed chainages; scroll through time and select cells for details.", "桌面全屏": "Desktop fullscreen", "收起视图 · Esc": "Collapse · Esc", "施工工序": "Activity", "前一天": "Previous day", "后一天": "Next day", "时段": "Time range", "单元格": "Cell size", "紧凑": "Compact", "标准": "Normal", "大字": "Large", "数值：雨量 mm/h · 时间为小时结束时间": "Values: rainfall mm/h · hour ending", "可横向与纵向滚动的施工颜色表": "Horizontally and vertically scrollable construction table", "24小时分段浏览；48/72小时可横向滚动。数据不足或过期显示灰色。": "Browse in 24-hour sections; scroll horizontally for 48/72 hours. Missing or stale data is gray.", "⛶ 展开施工颜色表": "⛶ Expand construction table", "逐小时排程": "Hourly schedule", "沿线监测点": "Monitoring points", "红色时段格": "Red period cells", "待核实时段格": "Unverified period cells"};
 (()=>{
-const $=s=>document.querySelector(s),fr=()=>document.documentElement.lang==='fr',t=(a,b)=>fr()?b:a;
+const $=s=>document.querySelector(s),fr=()=>document.documentElement.lang==='fr',t=(a,b)=>translate(document.documentElement.lang,a,b,desktopEnglish[a]);
 let expanded=false,start=0,count=24,scale=1;
 const overlay=document.createElement('section');overlay.id='scheduleWorkspace';overlay.hidden=true;overlay.setAttribute('role','region');overlay.setAttribute('aria-label','施工颜色表 / Tableau de chantier');document.body.append(overlay);
 function bindCells(root){root.querySelectorAll('[data-hour]').forEach(b=>b.onclick=()=>{const original=$(`#home [data-point="${b.dataset.point}"][data-hour="${b.dataset.hour}"]`);original?.click()})}

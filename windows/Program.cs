@@ -128,7 +128,11 @@ internal sealed class WeatherWindow : Form
         await Check("document.documentElement.lang === 'fr'", "French language");
         await core.ExecuteScriptAsync("document.querySelector('#language').click()");
         await Task.Delay(500);
-        await Check("document.documentElement.lang === 'zh'", "Chinese language");
+        await Check("document.documentElement.lang === 'en'", "English language");
+        await core.ExecuteScriptAsync("document.querySelectorAll('#nav button')[2].click()");
+        await Task.Delay(300);
+        await Check("document.querySelector('#zone').options.length > 300", "global time zones");
+        await core.ExecuteScriptAsync("document.querySelectorAll('#nav button')[0].click()");
         await Check("Boolean(window.YuanWindows && window.webkit.messageHandlers.save && window.Worker)", "native bridge and worker");
         using (var image = File.Create(Path.Combine(AppContext.BaseDirectory, "windows-smoke.png")))
             await core.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, image);

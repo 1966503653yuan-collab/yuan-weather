@@ -19,9 +19,9 @@ if [ -n "${YUAN_KEYSTORE:-}" ]; then
  : "${YUAN_STORE_PASSWORD:?Set YUAN_STORE_PASSWORD}"
  : "${YUAN_KEY_PASSWORD:?Set YUAN_KEY_PASSWORD}"
  export YUAN_STORE_PASSWORD YUAN_KEY_PASSWORD
- "$BT/apksigner" sign --ks "$YUAN_KEYSTORE" --ks-key-alias "$YUAN_KEY_ALIAS" --ks-pass env:YUAN_STORE_PASSWORD --key-pass env:YUAN_KEY_PASSWORD --out ../dist/YuanWeather-1.7.0-Android.apk build/aligned.apk
- "$BT/apksigner" verify --verbose ../dist/YuanWeather-1.7.0-Android.apk
+ "$BT/apksigner" sign --ks "$YUAN_KEYSTORE" --ks-key-alias "$YUAN_KEY_ALIAS" --ks-pass env:YUAN_STORE_PASSWORD --key-pass env:YUAN_KEY_PASSWORD --out ../dist/YuanWeather-1.8.0-Android.apk build/aligned.apk
+ "$BT/apksigner" verify --verbose ../dist/YuanWeather-1.8.0-Android.apk
 else
- cp build/aligned.apk ../dist/YuanWeather-1.7.0-Android-unsigned.apk
+ cp build/aligned.apk ../dist/YuanWeather-1.8.0-Android-unsigned.apk
  echo "Unsigned APK created. Set YUAN_KEYSTORE and signing environment variables to create an installable APK."
 fi
